@@ -1,0 +1,34 @@
+diff --git a/zwavejs2mqtt/Dockerfile b/zwavejs2mqtt/Dockerfile
+index 54a7749..cdf084e 100755
+--- a/zwavejs2mqtt/Dockerfile
++++ b/zwavejs2mqtt/Dockerfile
+@@ -38,7 +38,29 @@ RUN \
+     && yarn remove \
+         $(jq -r '.devDependencies | keys | join(" ")' package.json) \
+     && yarn cache clean \
++    && true
++
++# Rebuild node-zwave-js with patch
++COPY node-zwave-js_zl7432.patch /tmp/
++
++RUN \
++    export ZWJS="https://github.com/zwave-js/node-zwave-js/archive/refs/tags/v$(node -p "require('/opt/node_modules/zwave-js/package.json').version").tar.gz" \
++    && mkdir /tmp/node-zwave-js \
++    && curl -J -L -o /tmp/node-zwave-js.tar.gz ${ZWJS} \
++    && tar zxvf \
++        /tmp/node-zwave-js.tar.gz \
++        --strip 1 -C /tmp/node-zwave-js \
++    \
++    && cd /tmp/node-zwave-js \
++    && patch -p1  < /tmp/node-zwave-js_zl7432.patch \
+     \
++    && yarn \
++    && yarn run build \
++    && cp packages/config/config/devices/0x0109/zl7432.json /opt/node_modules/@zwave-js/config/config/devices/0x0109/ \
++    && cp packages/config/build/CompatConfig* /opt/node_modules/@zwave-js/config/build/ \
++    && cp packages/zwave-js/build/lib/node/Node.* /opt/node_modules/zwave-js/build/lib/node/
++
++RUN true \
+     && npm uninstall -g yarn \
+     && apk del --no-cache --purge .build-dependencies \
+     && rm -f -r \

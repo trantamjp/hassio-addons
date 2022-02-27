@@ -1,0 +1,83 @@
+diff --git a/packages/config/config/devices/0x0109/zl7432.json b/packages/config/config/devices/0x0109/zl7432.json
+index 8a4e6f38..53e3814a 100644
+--- a/packages/config/config/devices/0x0109/zl7432.json
++++ b/packages/config/config/devices/0x0109/zl7432.json
+@@ -25,5 +25,8 @@
+ 			"maxNodes": 5,
+ 			"isLifeline": true
+ 		}
++	},
++	"compat": {
++		"forceRefreshValuesCCReport": true
+ 	}
+ }
+diff --git a/packages/config/src/CompatConfig.ts b/packages/config/src/CompatConfig.ts
+index 1d022458..31713d31 100644
+--- a/packages/config/src/CompatConfig.ts
++++ b/packages/config/src/CompatConfig.ts
+@@ -91,6 +91,19 @@ error in compat option enableBasicSetMapping`,
+ 			this.enableBasicSetMapping = definition.enableBasicSetMapping;
+ 		}
+ 
++		if (definition.forceRefreshValuesCCReport != undefined) {
++			if (definition.forceRefreshValuesCCReport !== true) {
++				throwInvalidConfig(
++					"devices",
++					`config/devices/${filename}:
++error in compat option forceRefreshValuesCCReport`,
++				);
++			}
++
++			this.forceRefreshValuesCCReport =
++				definition.forceRefreshValuesCCReport;
++		}
++
+ 		if (definition.forceNotificationIdleReset != undefined) {
+ 			if (definition.forceNotificationIdleReset !== true) {
+ 				throwInvalidConfig(
+@@ -447,6 +460,7 @@ compat option alarmMapping must be an array where all items are objects!`,
+ 	public readonly disableBasicMapping?: boolean;
+ 	public readonly disableStrictEntryControlDataValidation?: boolean;
+ 	public readonly enableBasicSetMapping?: boolean;
++	public readonly forceRefreshValuesCCReport?: boolean;
+ 	public readonly forceNotificationIdleReset?: boolean;
+ 	public readonly forceSceneControllerGroupCount?: number;
+ 	public readonly manualValueRefreshDelayMs?: number;
+diff --git a/packages/zwave-js/src/lib/node/Node.ts b/packages/zwave-js/src/lib/node/Node.ts
+index 879a37e0..33893bd3 100644
+--- a/packages/zwave-js/src/lib/node/Node.ts
++++ b/packages/zwave-js/src/lib/node/Node.ts
+@@ -57,6 +57,7 @@ import {
+ 	stringify,
+ 	TypedEventEmitter,
+ } from "@zwave-js/shared";
++import { BinarySwitchCCReport } from "../commandclass/BinarySwitchCC";
+ import { padStart } from "alcalzone-shared/strings";
+ import { isArray, isObject } from "alcalzone-shared/typeguards";
+ import { randomBytes } from "crypto";
+@@ -2263,6 +2264,8 @@ protocol version:      ${this._protocolVersion}`;
+ 			return this.handleFirmwareUpdateStatusReport(command);
+ 		} else if (command instanceof EntryControlCCNotification) {
+ 			return this.handleEntryControlNotification(command);
++		} else if (command instanceof BinarySwitchCCReport) {
++			return this.handleBinarySwitchReport(command);
+ 		} else if (command instanceof PowerlevelCCTestNodeReport) {
+ 			return this.handlePowerlevelTestNodeReport(command);
+ 		}
+@@ -3641,6 +3644,16 @@ protocol version:      ${this._protocolVersion}`;
+ 		);
+ 	}
+ 
++	private handleBinarySwitchReport(_command: BinarySwitchCCReport): void {
++		if (this.deviceConfig?.compat?.forceRefreshValuesCCReport) {
++			this.driver.controllerLog.logNode(
++				this.id,
++				`Refreshing values for all endpoints...`,
++			);
++			void this.refreshValues();
++		}
++	}
++
+ 	/**
+ 	 * @internal
+ 	 * Serializes this node in order to store static data in a cache
