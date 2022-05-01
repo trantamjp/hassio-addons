@@ -1,7 +1,6 @@
-diff --git a/packages/config/config/devices/0x0109/zl7432.json b/packages/config/config/devices/0x0109/zl7432.json
-index 8a4e6f38..53e3814a 100644
---- a/packages/config/config/devices/0x0109/zl7432.json
-+++ b/packages/config/config/devices/0x0109/zl7432.json
+diff -uprN ../node-zwave-js-9.0.6-original/packages/config/config/devices/0x0109/zl7432.json ./packages/config/config/devices/0x0109/zl7432.json
+--- ../node-zwave-js-9.0.6-original/packages/config/config/devices/0x0109/zl7432.json	2022-05-01 15:19:30.952876874 -0700
++++ ./packages/config/config/devices/0x0109/zl7432.json	2022-05-01 15:11:31.503113633 -0700
 @@ -25,5 +25,8 @@
  			"maxNodes": 5,
  			"isLifeline": true
@@ -11,11 +10,10 @@ index 8a4e6f38..53e3814a 100644
 +		"forceRefreshValuesCCReport": true
  	}
  }
-diff --git a/packages/config/src/CompatConfig.ts b/packages/config/src/CompatConfig.ts
-index 1d022458..31713d31 100644
---- a/packages/config/src/CompatConfig.ts
-+++ b/packages/config/src/CompatConfig.ts
-@@ -91,6 +91,19 @@ error in compat option enableBasicSetMapping`,
+diff -uprN ../node-zwave-js-9.0.6-original/packages/config/src/devices/CompatConfig.ts ./packages/config/src/devices/CompatConfig.ts
+--- ../node-zwave-js-9.0.6-original/packages/config/src/devices/CompatConfig.ts	2022-05-01 15:19:30.972877071 -0700
++++ ./packages/config/src/devices/CompatConfig.ts	2022-05-01 15:13:30.711311028 -0700
+@@ -99,6 +99,19 @@ error in compat option enableBasicSetMap
  			this.enableBasicSetMapping = definition.enableBasicSetMapping;
  		}
  
@@ -35,7 +33,7 @@ index 1d022458..31713d31 100644
  		if (definition.forceNotificationIdleReset != undefined) {
  			if (definition.forceNotificationIdleReset !== true) {
  				throwInvalidConfig(
-@@ -447,6 +460,7 @@ compat option alarmMapping must be an array where all items are objects!`,
+@@ -468,6 +481,7 @@ compat option alarmMapping must be an ar
  	public readonly disableBasicMapping?: boolean;
  	public readonly disableStrictEntryControlDataValidation?: boolean;
  	public readonly enableBasicSetMapping?: boolean;
@@ -43,19 +41,18 @@ index 1d022458..31713d31 100644
  	public readonly forceNotificationIdleReset?: boolean;
  	public readonly forceSceneControllerGroupCount?: number;
  	public readonly manualValueRefreshDelayMs?: number;
-diff --git a/packages/zwave-js/src/lib/node/Node.ts b/packages/zwave-js/src/lib/node/Node.ts
-index 879a37e0..33893bd3 100644
---- a/packages/zwave-js/src/lib/node/Node.ts
-+++ b/packages/zwave-js/src/lib/node/Node.ts
-@@ -57,6 +57,7 @@ import {
+diff -uprN ../node-zwave-js-9.0.6-original/packages/zwave-js/src/lib/node/Node.ts ./packages/zwave-js/src/lib/node/Node.ts
+--- ../node-zwave-js-9.0.6-original/packages/zwave-js/src/lib/node/Node.ts	2022-05-01 15:19:30.980877150 -0700
++++ ./packages/zwave-js/src/lib/node/Node.ts	2022-05-01 15:17:01.795563195 -0700
+@@ -51,6 +51,7 @@ import {
  	stringify,
  	TypedEventEmitter,
  } from "@zwave-js/shared";
 +import { BinarySwitchCCReport } from "../commandclass/BinarySwitchCC";
+ import { roundTo } from "alcalzone-shared/math";
  import { padStart } from "alcalzone-shared/strings";
  import { isArray, isObject } from "alcalzone-shared/typeguards";
- import { randomBytes } from "crypto";
-@@ -2263,6 +2264,8 @@ protocol version:      ${this._protocolVersion}`;
+@@ -2306,6 +2307,8 @@ protocol version:      ${this.protocolVe
  			return this.handleFirmwareUpdateStatusReport(command);
  		} else if (command instanceof EntryControlCCNotification) {
  			return this.handleEntryControlNotification(command);
@@ -64,9 +61,9 @@ index 879a37e0..33893bd3 100644
  		} else if (command instanceof PowerlevelCCTestNodeReport) {
  			return this.handlePowerlevelTestNodeReport(command);
  		}
-@@ -3641,6 +3644,16 @@ protocol version:      ${this._protocolVersion}`;
- 		);
- 	}
+@@ -2331,6 +2334,16 @@ protocol version:      ${this.protocolVe
+ 
+ 	private hasLoggedNoNetworkKey = false;
  
 +	private handleBinarySwitchReport(_command: BinarySwitchCCReport): void {
 +		if (this.deviceConfig?.compat?.forceRefreshValuesCCReport) {
@@ -80,4 +77,4 @@ index 879a37e0..33893bd3 100644
 +
  	/**
  	 * @internal
- 	 * Serializes this node in order to store static data in a cache
+ 	 * Handles a nonce request

@@ -1,7 +1,7 @@
 # About
 
 This repository contains unofficial addons:
-* [ZWaveJS2MQTT](https://github.com/trantamjp/Hassio-addon-ZWaveJS2MQTT/tree/master/zwavejs2mqtt).
+* [ZWaveJS2MQTT](https://github.com/trantamjp/addon-zwavejs2mqtt/tree/custom).
 * [DahuaVTO2MQTT](https://github.com/trantamjp/Hassio-addons-DahuaVTO2MQTT/tree/master/dahuavto2mqtt).
 
 # Installation

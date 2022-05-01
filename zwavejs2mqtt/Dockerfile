@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/amd64:11.0.1
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/amd64:11.1.2
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
@@ -20,13 +20,13 @@ RUN \
     && apk add --no-cache \
         eudev=3.2.11_pre1-r0 \
         libusb=1.0.24-r3 \
-        nginx=1.20.2-r0 \
+        nginx=1.20.2-r1 \
         nodejs=16.14.2-r0 \
     \
     && npm install --global yarn@2.4.3 \
     \
     && curl -J -L -o /tmp/zwavejs2mqtt.tar.gz \
-        "https://github.com/zwave-js/zwavejs2mqtt/archive/v6.5.2.tar.gz" \
+        $(curl -s https://api.github.com/repos/zwave-js/zwavejs2mqtt/releases/latest | jq -r '.tarball_url') \
     && tar zxvf \
         /tmp/zwavejs2mqtt.tar.gz \
         --strip 1 -C /opt \
@@ -35,6 +35,8 @@ RUN \
     && yarn install --immutable \
     && yarn run build:server \
     && yarn run build:ui \
+    && npm_config_build_from_source=true \
+        yarn rebuild @serialport/bindings-cpp \
     && yarn remove \
         $(jq -r '.devDependencies | keys | join(" ")' package.json) \
     && yarn cache clean \
@@ -52,15 +54,18 @@ RUN \
         --strip 1 -C /tmp/node-zwave-js \
     \
     && cd /tmp/node-zwave-js \
-    && patch -p1  < /tmp/node-zwave-js_zl7432.patch \
+    && patch -p0  < /tmp/node-zwave-js_zl7432.patch \
     \
     && yarn \
-    && yarn run build \
-    && cp packages/config/config/devices/0x0109/zl7432.json /opt/node_modules/@zwave-js/config/config/devices/0x0109/ \
-    && cp packages/config/build/CompatConfig* /opt/node_modules/@zwave-js/config/build/ \
-    && cp packages/zwave-js/build/lib/node/Node.* /opt/node_modules/zwave-js/build/lib/node/
+    && yarn run build
 
 RUN true \
+    && cp -v /tmp/node-zwave-js/packages/config/config/devices/0x0109/zl7432.json /opt/node_modules/@zwave-js/config/config/devices/0x0109/zl7432.json \
+    && cp -v /tmp/node-zwave-js/packages/config/build/devices/CompatConfig* /opt/node_modules/@zwave-js/config/build/devices/ \
+    && cp -v /tmp/node-zwave-js/packages/zwave-js/build/lib/node/Node.* /opt/node_modules/zwave-js/build/lib/node/
+
+RUN true \
+    \
     && npm uninstall -g yarn \
     && apk del --no-cache --purge .build-dependencies \
     && rm -f -r \
