@@ -8,6 +8,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Yarn can timeout from time to time in CI
 ENV YARN_HTTP_TIMEOUT=1000000
 
+COPY node-zwave-js_zl7432.patch /tmp/
+
 # Setup base
 # hadolint ignore=DL3003,SC2046
 RUN \
@@ -39,14 +41,7 @@ RUN \
         yarn rebuild @serialport/bindings-cpp \
     && yarn remove \
         $(jq -r '.devDependencies | keys | join(" ")' package.json) \
-    && yarn cache clean \
-    && true
-
-# Rebuild node-zwave-js with patch
-COPY node-zwave-js_zl7432.patch /tmp/
-
-RUN \
-    export ZWJS="https://github.com/zwave-js/node-zwave-js/archive/refs/tags/v$(node -p "require('/opt/node_modules/zwave-js/package.json').version").tar.gz" \
+    && export ZWJS="https://github.com/zwave-js/node-zwave-js/archive/refs/tags/v$(node -p "require('/opt/node_modules/zwave-js/package.json').version").tar.gz" \
     && mkdir /tmp/node-zwave-js \
     && curl -J -L -o /tmp/node-zwave-js.tar.gz ${ZWJS} \
     && tar zxvf \
@@ -57,14 +52,13 @@ RUN \
     && patch -p0  < /tmp/node-zwave-js_zl7432.patch \
     \
     && yarn \
-    && yarn run build
-
-RUN true \
+    && yarn run build \
+    && ls -l /tmp/node-zwave-js \
+    && ls -l /tmp/node-zwave-js/node_modules \
     && cp -v /tmp/node-zwave-js/packages/config/config/devices/0x0109/zl7432.json /opt/node_modules/@zwave-js/config/config/devices/0x0109/zl7432.json \
     && cp -v /tmp/node-zwave-js/packages/config/build/devices/CompatConfig* /opt/node_modules/@zwave-js/config/build/devices/ \
-    && cp -v /tmp/node-zwave-js/packages/zwave-js/build/lib/node/Node.* /opt/node_modules/zwave-js/build/lib/node/
-
-RUN true \
+    && cp -v /tmp/node-zwave-js/packages/zwave-js/build/lib/node/Node.* /opt/node_modules/zwave-js/build/lib/node/ \
+    && yarn cache clean \
     \
     && npm uninstall -g yarn \
     && apk del --no-cache --purge .build-dependencies \
